@@ -123,3 +123,66 @@ The naming conventions are mostly consistent across the Spring Boot projects men
 * https://github.com/ucsb-cs156/proj-frontiers
 * https://github.com/ucsb-cs156/proj-happycows
 * https://github.com/ucsb-cs156/proj-scaffold
+
+
+# Question: Should we pivot in name and scope?
+
+When you are done with that, before we pivot to the next step in building the dining proxy:
+
+Here's a question.  We also have another app that accesses various https://api.ucsb.edu endpoints.
+
+Maybe we should rename the repo and the app to 
+
+proj-ucsb-api-caching-proxy
+
+And expand the scope to include proj-courses as well.
+
+Both proj-dining and proj-courses also do some of their own internal caching, but the point of this caching proxy is that when you have an entire classroom where sometimes 48 different students are doing development implementations and all hitting up these api endpoints, it can get a bit noisy for the server.
+
+So the caching inside each of these apps is helpful, but for the sum total across all of them, we still want some caching at the network level.
+
+What do you think?
+
+Can you look over https://github.com/ucsb-cs156/proj-courses and assess whether, perhaps, we might just treat the two apps as equivalent for purposes of the proxy?
+
+We might want to do a similar PR on proj-courses where we factor out an environment variable and application.properties value for the API prefix.
+
+Let me know your thoughts.
+
+## Response from Claude
+
+Short version: mechanically compatible, but not semantically equivalent — I'd hold off on both the rename and the scope expansion until the proxy's design grows a TTL concept, or scope any early proj-courses integration to only the endpoints that share dining's "never changes once written" assumption.
+
+### What I found in proj-courses
+
+proj-courses calls several `api.ucsb.edu` paths (`/academics/curriculums/v1/classes/search`, `/academics/curriculums/v3/classes/{quarter}/{enrollcode}`, `/academics/curriculums/v3/finals`, `/academics/quartercalendar/v1/quarters/current`, `/academics/quartercalendar/v1/quarters`, `/students/lookups/v1/subjects`, `/students/lookups/v1/requirements`), all from `UCSBCurriculumService`/`UCSBAPIQuarterService`/`UCSBSubjectsService`. Mechanically, it looks a lot like proj-dining: every call is a GET, and every call sends the same `ucsb-api-key`/`ucsb-api-version` header pair proj-dining uses. So the transport layer, the admin UI, and the `CachedResponse` schema this proxy is built around would all reuse cleanly — that part of "treat them as equivalent" holds up.
+
+Where it breaks down is the caching *semantics*, and this proxy's current design (cache-by-URL-and-headers, no expiry, one row per unique request forever) is built entirely around an assumption that's true for dining but not for courses: "today's menu, once posted, never changes." Two things in proj-courses violate that:
+
+- `quarters/current` has **no distinguishing query parameters at all** — it's a "what quarter is it right now" call whose answer changes at every quarter rollover. Cache it forever and it's wrong forever, the very next quarter.
+- Course-search results (basicsearch/sectionsearch/primaries, for the current or an upcoming quarter) reflect **live enrollment, seat count, and waitlist state that changes continuously during registration**. Caching those forever wouldn't just be stale — it'd hand every student after the first request bad seat-availability data, which is a correctness bug, not just a missed optimization.
+
+That's not a hypothetical concern on proj-courses' end, either — they've already had to solve it. proj-courses only caches `getCurrentQuarter()` in memory for 24 hours, and everything else the frontend actually hits (`/api/public/primaries`, `/basicsearch`, `/sectionsearch`, etc.) goes straight to the UCSB API live. For their own background-job-populated data they built a separate, DB-backed `IsStaleService` with a configurable staleness threshold — i.e., they already needed real TTL semantics and built their own rather than a cache-forever model. They've also got their own IP-based rate limiter (`RateLimitFilter`), which suggests the "48 students hammering the API at once" problem you're solving for here is one they've already felt too.
+
+On the host-config PR: proj-courses doesn't have the `UCSB_DINING_API_HOST`-style env var yet in the upstream repo — I found it as an uncommitted local change on this machine, which I'm reading as exactly the PR you're about to prepare yourself (matching #135's pattern). That's a genuine prerequisite for any shared proxy regardless of what we decide below, so it's worth doing either way.
+
+### Recommendation
+
+Don't rename or expand scope yet. Two options, in order of preference:
+
+1. **Ship the dining-only proxy as planned, revisit proj-courses later.** Once the MVP is out and (if it's ever needed) the design grows a per-cache-entry TTL/expiry concept — even a simple "cache for N minutes" default per route — proj-courses becomes a much more natural fit, and at that point the rename to `proj-ucsb-api-caching-proxy` would actually describe what the tool does rather than get ahead of it.
+2. **If you want to fold proj-courses in now anyway,** don't treat all its endpoints as equivalent to dining's — explicitly scope it to the genuinely immutable ones (past-quarter classes, finals info for a completed quarter) and exclude `quarters/current` and any current/future-quarter search from caching entirely. That's more integration work than "just point it at the same proxy," and it means the proxy needs an explicit non-cacheable/short-TTL escape hatch from day one instead of later — which is really the same conclusion as option 1, just pulled forward.
+
+### Addendum: it's not just cache/don't-cache, it's cache-for-how-long
+
+Following up on the recommendation above, in conversation the point was sharpened further: the proxy doesn't just need to know *whether* an endpoint is cacheable, it needs to know *for how long*. `quarters/current` is the clearest example — caching it for 24 hours is safe (worst case, a student sees yesterday's quarter for a few hours around a rollover, which is merely stale and self-corrects on the next refresh), but caching it for days or weeks is not merely stale, it's actively wrong: every downstream call that trusts "current quarter" to pick a quarter would silently operate on the wrong one long after the real rollover happened.
+
+So the design has (at least) three tiers per endpoint, not two:
+
+- **Cache forever** — dining menus once posted; nothing ever un-happens.
+- **Cache with a bounded TTL** — `quarters/current`-style data that changes rarely but must expire on a schedule tied to how often it actually changes.
+- **Never cache** — live seat/waitlist/enrollment search during registration, where any caching window produces wrong answers.
+
+[Issue #2](https://github.com/ucsb-cs156/proj-dining-caching-proxy/issues/2) is the first concrete step toward this: before TTLs can be assigned per endpoint, the proxy first needs to know *what* endpoints it has actually seen (independent of query parameters) and how often each has been hit. That's deliberately scoped as observation-only for now — a controller endpoint listing seen API paths with hit counts — with the TTL configuration (global default, per-host override, per-endpoint override, `0` meaning never-cache) layered on top once that inventory exists. That sequencing lines up with the recommendation above: build the visibility and TTL-policy layer against dining's own endpoints first, then proj-courses becomes an integration question rather than a redesign.
+
+Either way, I'd treat the rename as a decision to make *after* scope is settled, not before — `proj-ucsb-api-caching-proxy` as a name commits to "this proxy is generic across UCSB apps," and right now that's only true for the transport layer, not for the caching logic that's the actual point of the project.
