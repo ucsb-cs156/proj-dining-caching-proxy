@@ -1,7 +1,10 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import UsersIndexPage from "main/pages/Admin/UsersIndexPage";
+import AdminsIndexPage from "main/pages/Admin/AdminsIndexPage";
+import AdminsCreatePage from "main/pages/Admin/AdminsCreatePage";
+import HostManagersIndexPage from "main/pages/Admin/HostManagersIndexPage";
+import HostManagersCreatePage from "main/pages/Admin/HostManagersCreatePage";
 import ProtectedPage from "main/pages/Auth/ProtectedPage";
 import NotFoundPage from "main/pages/Auth/NotFoundPage";
 import AboutPage from "main/pages/Help/AboutPage";
@@ -30,10 +33,40 @@ export default function App() {
         <Route path="/login" element={<SignInPage />} />
         <Route path="/login/success" element={<SignInSuccessPage />} />
         <Route
-          path="/admin/users"
+          path="/admin/admins"
           element={
             <ProtectedPage
-              component={<UsersIndexPage />}
+              component={<AdminsIndexPage />}
+              enforceRole={"ROLE_ADMIN"}
+              currentUser={currentUser}
+            />
+          }
+        />
+        <Route
+          path="/admin/admins/create"
+          element={
+            <ProtectedPage
+              component={<AdminsCreatePage />}
+              enforceRole={"ROLE_ADMIN"}
+              currentUser={currentUser}
+            />
+          }
+        />
+        <Route
+          path="/admin/hostmanagers"
+          element={
+            <ProtectedPage
+              component={<HostManagersIndexPage />}
+              enforceRole={"ROLE_ADMIN"}
+              currentUser={currentUser}
+            />
+          }
+        />
+        <Route
+          path="/admin/hostmanagers/create"
+          element={
+            <ProtectedPage
+              component={<HostManagersCreatePage />}
               enforceRole={"ROLE_ADMIN"}
               currentUser={currentUser}
             />

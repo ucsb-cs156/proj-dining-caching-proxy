@@ -21,6 +21,10 @@ public abstract class ApiController {
     return currentUserService.getCurrentUser();
   }
 
+  protected Object genericMessage(String message) {
+    return Map.of("message", message);
+  }
+
   @ExceptionHandler({EntityNotFoundException.class})
   @ResponseStatus(HttpStatus.NOT_FOUND)
   public Object handleEntityNotFoundException(Throwable e) {

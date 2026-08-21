@@ -118,7 +118,7 @@ describe("AppNavbar tests", () => {
     // dropdown toggle is clicked open, so click it first.
     fireEvent.click(adminToggle);
 
-    const adminMenuItems = ["Users", "Developer Info"];
+    const adminMenuItems = ["Admins", "Host Managers", "Developer Info"];
 
     await waitFor(() => {
       adminMenuItems.forEach((item) => {
