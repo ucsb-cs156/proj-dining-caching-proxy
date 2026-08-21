@@ -46,42 +46,45 @@ public class DiningProxyService {
 <span class="fc bfc" id="L46" title="All 2 branches covered.">    if (cached.isPresent()) {</span>
 <span class="fc" id="L47">      statsService.recordHit();</span>
 <span class="fc" id="L48">      CachedResponse c = cached.get();</span>
-<span class="fc" id="L49">      return ResponseEntity.status(c.getResponseStatus())</span>
-<span class="fc" id="L50">          .contentType(MediaType.APPLICATION_JSON)</span>
-<span class="fc" id="L51">          .body(c.getResponseBody());</span>
+<span class="fc" id="L49">      c.setHitCount(c.getHitCount() + 1);</span>
+<span class="fc" id="L50">      cachedResponseRepository.save(c);</span>
+<span class="fc" id="L51">      return ResponseEntity.status(c.getResponseStatus())</span>
+<span class="fc" id="L52">          .contentType(MediaType.APPLICATION_JSON)</span>
+<span class="fc" id="L53">          .body(c.getResponseBody());</span>
     }
 
-<span class="fc" id="L54">    statsService.recordMiss();</span>
+<span class="fc" id="L56">    statsService.recordMiss();</span>
 
-<span class="fc" id="L56">    HttpHeaders headers = new HttpHeaders();</span>
-<span class="fc" id="L57">    headers.setAccept(List.of(MediaType.APPLICATION_JSON));</span>
-<span class="fc" id="L58">    headers.setContentType(MediaType.APPLICATION_JSON);</span>
-<span class="fc bfc" id="L59" title="All 2 branches covered.">    if (apiKey != null) {</span>
-<span class="fc" id="L60">      headers.set(&quot;ucsb-api-key&quot;, apiKey);</span>
+<span class="fc" id="L58">    HttpHeaders headers = new HttpHeaders();</span>
+<span class="fc" id="L59">    headers.setAccept(List.of(MediaType.APPLICATION_JSON));</span>
+<span class="fc" id="L60">    headers.setContentType(MediaType.APPLICATION_JSON);</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">    if (apiKey != null) {</span>
+<span class="fc" id="L62">      headers.set(&quot;ucsb-api-key&quot;, apiKey);</span>
     }
-<span class="fc bfc" id="L62" title="All 2 branches covered.">    if (apiVersion != null) {</span>
-<span class="fc" id="L63">      headers.set(&quot;ucsb-api-version&quot;, apiVersion);</span>
+<span class="fc bfc" id="L64" title="All 2 branches covered.">    if (apiVersion != null) {</span>
+<span class="fc" id="L65">      headers.set(&quot;ucsb-api-version&quot;, apiVersion);</span>
     }
 
     ResponseEntity&lt;String&gt; upstreamResponse;
     try {
-<span class="fc" id="L68">      upstreamResponse =</span>
-<span class="fc" id="L69">          restTemplate.exchange(</span>
+<span class="fc" id="L70">      upstreamResponse =</span>
+<span class="fc" id="L71">          restTemplate.exchange(</span>
               upstreamHost + requestPath, HttpMethod.GET, new HttpEntity&lt;&gt;(headers), String.class);
-<span class="fc" id="L71">    } catch (HttpClientErrorException | HttpServerErrorException e) {</span>
-<span class="fc" id="L72">      return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());</span>
-<span class="fc" id="L73">    }</span>
+<span class="fc" id="L73">    } catch (HttpClientErrorException | HttpServerErrorException e) {</span>
+<span class="fc" id="L74">      return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());</span>
+<span class="fc" id="L75">    }</span>
 
-<span class="fc bfc" id="L75" title="All 2 branches covered.">    if (upstreamResponse.getStatusCode().is2xxSuccessful()) {</span>
-<span class="fc" id="L76">      cachedResponseRepository.save(</span>
-<span class="fc" id="L77">          CachedResponse.builder()</span>
-<span class="fc" id="L78">              .requestPath(requestPath)</span>
-<span class="fc" id="L79">              .responseStatus(upstreamResponse.getStatusCode().value())</span>
-<span class="fc" id="L80">              .responseBody(upstreamResponse.getBody())</span>
-<span class="fc" id="L81">              .build());</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">    if (upstreamResponse.getStatusCode().is2xxSuccessful()) {</span>
+<span class="fc" id="L78">      cachedResponseRepository.save(</span>
+<span class="fc" id="L79">          CachedResponse.builder()</span>
+<span class="fc" id="L80">              .requestPath(requestPath)</span>
+<span class="fc" id="L81">              .responseStatus(upstreamResponse.getStatusCode().value())</span>
+<span class="fc" id="L82">              .responseBody(upstreamResponse.getBody())</span>
+<span class="fc" id="L83">              .hitCount(1)</span>
+<span class="fc" id="L84">              .build());</span>
     }
 
-<span class="fc" id="L84">    return upstreamResponse;</span>
+<span class="fc" id="L87">    return upstreamResponse;</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
