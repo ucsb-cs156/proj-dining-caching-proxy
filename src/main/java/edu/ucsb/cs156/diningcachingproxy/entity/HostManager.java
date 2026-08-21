@@ -7,7 +7,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
-@Entity(name = "hostManagers")
+@Entity(name = "hostmanagers")
 public class HostManager {
   @Id private String email;
 }
