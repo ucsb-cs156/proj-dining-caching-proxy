@@ -1,0 +1,23 @@
+title: Documentation
+description: >- # this means to ignore newlines until "baseurl:"
+  When reviewing a PR for this repo, you can see what the documentation,
+  e.g. the storybook, will look like when published for the branches
+  named above.
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "" # the base hostname & protocol for your site, e.g. http://example.com
+
+# Build settings
+theme: minima
+plugins:
+  - jekyll-feed
+
+collections:
+  branches:
+    output: true
+    permalink: /branches/:path/
+
+repo_name: "TBD"
+repo: ucsb-cs156/proj-dining-caching-proxy
+owner: ucsb-cs156
+repo_name: proj-dining-caching-proxy
+pull_requests: [{"author":{"id":"MDQ6VXNlcjExMTkwMTc=","is_bot":false,"login":"pconrad","name":"Phill Conrad"},"headRefName":"pc/bootstrap-app-pr1","number":1,"title":"Bootstrap diningcachingproxy: auth/roles skeleton with full CI/tooling parity","url":"https://github.com/ucsb-cs156/proj-dining-caching-proxy/pull/1"}]
