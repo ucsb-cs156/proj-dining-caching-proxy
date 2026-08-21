@@ -20,4 +20,4 @@ repo_name: "TBD"
 repo: ucsb-cs156/proj-dining-caching-proxy
 owner: ucsb-cs156
 repo_name: proj-dining-caching-proxy
-pull_requests: []
+pull_requests: [{"author":{"id":"MDQ6VXNlcjExMTkwMTc=","is_bot":false,"login":"pconrad","name":"Phill Conrad"},"headRefName":"pc/pr2-caching-proxy-core","number":3,"title":"Implement caching proxy MVP: pass-through proxy, Mongo cache, stats dashboard","url":"https://github.com/ucsb-cs156/proj-dining-caching-proxy/pull/3"}]
