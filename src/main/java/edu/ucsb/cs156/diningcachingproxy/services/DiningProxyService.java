@@ -46,6 +46,8 @@ public class DiningProxyService {
     if (cached.isPresent()) {
       statsService.recordHit();
       CachedResponse c = cached.get();
+      c.setHitCount(c.getHitCount() + 1);
+      cachedResponseRepository.save(c);
       return ResponseEntity.status(c.getResponseStatus())
           .contentType(MediaType.APPLICATION_JSON)
           .body(c.getResponseBody());
@@ -78,6 +80,7 @@ public class DiningProxyService {
               .requestPath(requestPath)
               .responseStatus(upstreamResponse.getStatusCode().value())
               .responseBody(upstreamResponse.getBody())
+              .hitCount(1)
               .build());
     }
 

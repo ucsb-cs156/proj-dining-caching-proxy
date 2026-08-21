@@ -23,7 +23,8 @@ import org.springframework.web.client.RestTemplate;
 /**
  * End-to-end verification of the caching flow against a real (embedded) MongoDB: a cache miss is
  * forwarded upstream and saved, a second identical request is served from the cache with no second
- * upstream call, and the stats counters reflect both.
+ * upstream call, the stats counters reflect both, and the cached endpoint's hit count and
+ * appearance in the admin endpoint-inventory view are correct.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -35,7 +36,7 @@ public class DiningProxyIntegrationTests {
   @Autowired private CachedResponseRepository cachedResponseRepository;
 
   @Test
-  @WithMockUser(roles = "USER")
+  @WithMockUser(roles = "ADMIN")
   public void a_cache_miss_is_stored_and_a_repeat_request_is_served_from_the_cache()
       throws Exception {
     cachedResponseRepository.deleteAll();
@@ -72,5 +73,15 @@ public class DiningProxyIntegrationTests {
     assertEquals(
         "{\"totalRequests\":2,\"cacheHits\":1,\"cacheMisses\":1,\"hitRatePercentage\":50.0}",
         statsJson);
+
+    String endpointsJson =
+        mockMvc
+            .perform(get("/api/admin/endpoints"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    assertEquals("[{\"requestPath\":\"/dining/commons/v1/\",\"hitCount\":2}]", endpointsJson);
   }
 }

@@ -46,12 +46,13 @@ public class DiningProxyServiceTests {
   }
 
   @Test
-  public void cache_hit_returns_cached_response_without_calling_upstream() {
+  public void cache_hit_returns_cached_response_and_increments_hit_count() {
     CachedResponse cached =
         CachedResponse.builder()
             .requestPath("/dining/commons/v1/")
             .responseStatus(200)
             .responseBody("[\"cached\"]")
+            .hitCount(4)
             .build();
     when(cachedResponseRepository.findByRequestPath("/dining/commons/v1/"))
         .thenReturn(Optional.of(cached));
@@ -63,6 +64,15 @@ public class DiningProxyServiceTests {
     assertEquals("[\"cached\"]", response.getBody());
     verify(statsService, times(1)).recordHit();
     verify(statsService, times(0)).recordMiss();
+    verify(cachedResponseRepository, times(1))
+        .save(
+            eq(
+                CachedResponse.builder()
+                    .requestPath("/dining/commons/v1/")
+                    .responseStatus(200)
+                    .responseBody("[\"cached\"]")
+                    .hitCount(5)
+                    .build()));
     mockServer.verify();
   }
 
@@ -92,6 +102,7 @@ public class DiningProxyServiceTests {
                     .requestPath("/dining/commons/v1/")
                     .responseStatus(200)
                     .responseBody("[\"fresh\"]")
+                    .hitCount(1)
                     .build()));
     mockServer.verify();
   }

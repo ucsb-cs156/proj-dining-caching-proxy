@@ -27,4 +27,8 @@ public class CachedResponse {
 
   private int responseStatus;
   private String responseBody;
+
+  // Times this request path has been served (1 on first cache, incremented on every
+  // subsequent cache hit) — feeds the admin endpoint-inventory view (issue #2).
+  private long hitCount;
 }
