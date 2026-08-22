@@ -31,29 +31,35 @@ import org.springframework.web.bind.annotation.RestController;
   public ResponseEntity&lt;String&gt; proxy(
       HttpServletRequest request,
       @RequestHeader(value = &quot;ucsb-api-key&quot;, required = false) String apiKey,
-      @RequestHeader(value = &quot;ucsb-api-version&quot;, required = false) String apiVersion) {
-<span class="fc" id="L35">    String clientAddress = extractClientAddress(request);</span>
-<span class="fc" id="L36">    boolean isNewAddress = hostTrackingService.recordRequest(clientAddress);</span>
-<span class="fc bfc" id="L37" title="All 2 branches covered.">    if (isNewAddress) {</span>
-<span class="fc" id="L38">      resolveHostnameJobFactory.launch(clientAddress);</span>
+      @RequestHeader(value = &quot;ucsb-api-version&quot;, required = false) String apiVersion,
+      @RequestHeader(value = &quot;X-Requesting-App&quot;, required = false) String requestingApp) {
+<span class="fc" id="L36">    String clientAddress = extractClientAddress(request);</span>
+    // A caller that self-identifies is tracked by that name instead of its IP - callers on the
+    // same Dokku host as this proxy all share Docker's internal bridge network, so the IP alone
+    // can't distinguish one calling app from another and never resolves via reverse DNS anyway.
+    String identifier =
+<span class="fc bfc" id="L41" title="All 4 branches covered.">        (requestingApp != null &amp;&amp; !requestingApp.isBlank()) ? requestingApp : clientAddress;</span>
+<span class="fc" id="L42">    boolean isNewAddress = hostTrackingService.recordRequest(identifier);</span>
+<span class="fc bfc" id="L43" title="All 4 branches covered.">    if (isNewAddress &amp;&amp; identifier.equals(clientAddress)) {</span>
+<span class="fc" id="L44">      resolveHostnameJobFactory.launch(clientAddress);</span>
     }
 
-<span class="fc" id="L41">    String requestPath = request.getRequestURI();</span>
-<span class="fc" id="L42">    String queryString = request.getQueryString();</span>
-<span class="fc bfc" id="L43" title="All 2 branches covered.">    if (queryString != null) {</span>
-<span class="fc" id="L44">      requestPath = requestPath + &quot;?&quot; + queryString;</span>
+<span class="fc" id="L47">    String requestPath = request.getRequestURI();</span>
+<span class="fc" id="L48">    String queryString = request.getQueryString();</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">    if (queryString != null) {</span>
+<span class="fc" id="L50">      requestPath = requestPath + &quot;?&quot; + queryString;</span>
     }
-<span class="fc" id="L46">    return diningProxyService.proxyGet(requestPath, apiKey, apiVersion);</span>
+<span class="fc" id="L52">    return diningProxyService.proxyGet(requestPath, apiKey, apiVersion);</span>
   }
 
   // This app runs behind Dokku's reverse proxy, so request.getRemoteAddr() would only ever
   // report nginx's own internal address - the true caller's IP is in X-Forwarded-For.
   private String extractClientAddress(HttpServletRequest request) {
-<span class="fc" id="L52">    String forwardedFor = request.getHeader(&quot;X-Forwarded-For&quot;);</span>
-<span class="fc bfc" id="L53" title="All 4 branches covered.">    if (forwardedFor != null &amp;&amp; !forwardedFor.isBlank()) {</span>
-<span class="fc" id="L54">      return forwardedFor.split(&quot;,&quot;)[0].trim();</span>
+<span class="fc" id="L58">    String forwardedFor = request.getHeader(&quot;X-Forwarded-For&quot;);</span>
+<span class="fc bfc" id="L59" title="All 4 branches covered.">    if (forwardedFor != null &amp;&amp; !forwardedFor.isBlank()) {</span>
+<span class="fc" id="L60">      return forwardedFor.split(&quot;,&quot;)[0].trim();</span>
     }
-<span class="fc" id="L56">    return request.getRemoteAddr();</span>
+<span class="fc" id="L62">    return request.getRemoteAddr();</span>
   }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
