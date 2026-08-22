@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import edu.ucsb.cs156.diningcachingproxy.ControllerTestCase;
 import edu.ucsb.cs156.diningcachingproxy.services.DiningProxyService;
+import edu.ucsb.cs156.diningcachingproxy.services.HostTrackingService;
+import edu.ucsb.cs156.diningcachingproxy.services.ResolveHostnameJobFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.HttpStatus;
@@ -22,6 +24,8 @@ import org.springframework.test.web.servlet.MvcResult;
 public class DiningProxyControllerTests extends ControllerTestCase {
 
   @MockitoBean DiningProxyService diningProxyService;
+  @MockitoBean HostTrackingService hostTrackingService;
+  @MockitoBean ResolveHostnameJobFactory resolveHostnameJobFactory;
 
   @Test
   public void proxies_the_dining_commons_list_endpoint() throws Exception {
@@ -98,5 +102,67 @@ public class DiningProxyControllerTests extends ControllerTestCase {
 
     verify(diningProxyService, times(1))
         .proxyGet("/dining/commons/v1/?includeClosed=true", null, null);
+  }
+
+  @Test
+  public void records_the_first_hop_of_a_multi_hop_x_forwarded_for_header() throws Exception {
+    when(diningProxyService.proxyGet(eq("/dining/commons/v1/"), isNull(), isNull()))
+        .thenReturn(ResponseEntity.status(HttpStatus.OK).body("[]"));
+
+    mockMvc
+        .perform(get("/dining/commons/v1/").header("X-Forwarded-For", "203.0.113.5, 10.0.0.1"))
+        .andExpect(status().isOk());
+
+    verify(hostTrackingService, times(1)).recordRequest("203.0.113.5");
+  }
+
+  @Test
+  public void falls_back_to_the_remote_address_when_there_is_no_x_forwarded_for_header()
+      throws Exception {
+    when(diningProxyService.proxyGet(eq("/dining/commons/v1/"), isNull(), isNull()))
+        .thenReturn(ResponseEntity.status(HttpStatus.OK).body("[]"));
+
+    mockMvc.perform(get("/dining/commons/v1/")).andExpect(status().isOk());
+
+    verify(hostTrackingService, times(1)).recordRequest("127.0.0.1");
+  }
+
+  @Test
+  public void falls_back_to_the_remote_address_when_x_forwarded_for_is_blank() throws Exception {
+    when(diningProxyService.proxyGet(eq("/dining/commons/v1/"), isNull(), isNull()))
+        .thenReturn(ResponseEntity.status(HttpStatus.OK).body("[]"));
+
+    mockMvc
+        .perform(get("/dining/commons/v1/").header("X-Forwarded-For", "   "))
+        .andExpect(status().isOk());
+
+    verify(hostTrackingService, times(1)).recordRequest("127.0.0.1");
+  }
+
+  @Test
+  public void launches_a_resolution_job_when_the_address_is_new() throws Exception {
+    when(diningProxyService.proxyGet(eq("/dining/commons/v1/"), isNull(), isNull()))
+        .thenReturn(ResponseEntity.status(HttpStatus.OK).body("[]"));
+    when(hostTrackingService.recordRequest("203.0.113.5")).thenReturn(true);
+
+    mockMvc
+        .perform(get("/dining/commons/v1/").header("X-Forwarded-For", "203.0.113.5"))
+        .andExpect(status().isOk());
+
+    verify(resolveHostnameJobFactory, times(1)).launch("203.0.113.5");
+  }
+
+  @Test
+  public void does_not_launch_a_resolution_job_when_the_address_has_been_seen_before()
+      throws Exception {
+    when(diningProxyService.proxyGet(eq("/dining/commons/v1/"), isNull(), isNull()))
+        .thenReturn(ResponseEntity.status(HttpStatus.OK).body("[]"));
+    when(hostTrackingService.recordRequest("203.0.113.5")).thenReturn(false);
+
+    mockMvc
+        .perform(get("/dining/commons/v1/").header("X-Forwarded-For", "203.0.113.5"))
+        .andExpect(status().isOk());
+
+    verify(resolveHostnameJobFactory, times(0)).launch("203.0.113.5");
   }
 }
