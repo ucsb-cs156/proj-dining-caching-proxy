@@ -31,10 +31,16 @@ public class DiningProxyController {
   public ResponseEntity<String> proxy(
       HttpServletRequest request,
       @RequestHeader(value = "ucsb-api-key", required = false) String apiKey,
-      @RequestHeader(value = "ucsb-api-version", required = false) String apiVersion) {
+      @RequestHeader(value = "ucsb-api-version", required = false) String apiVersion,
+      @RequestHeader(value = "X-Requesting-App", required = false) String requestingApp) {
     String clientAddress = extractClientAddress(request);
-    boolean isNewAddress = hostTrackingService.recordRequest(clientAddress);
-    if (isNewAddress) {
+    // A caller that self-identifies is tracked by that name instead of its IP - callers on the
+    // same Dokku host as this proxy all share Docker's internal bridge network, so the IP alone
+    // can't distinguish one calling app from another and never resolves via reverse DNS anyway.
+    String identifier =
+        (requestingApp != null && !requestingApp.isBlank()) ? requestingApp : clientAddress;
+    boolean isNewAddress = hostTrackingService.recordRequest(identifier);
+    if (isNewAddress && identifier.equals(clientAddress)) {
       resolveHostnameJobFactory.launch(clientAddress);
     }
 

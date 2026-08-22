@@ -1,6 +1,7 @@
 package edu.ucsb.cs156.diningcachingproxy.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.times;
@@ -164,5 +165,52 @@ public class DiningProxyControllerTests extends ControllerTestCase {
         .andExpect(status().isOk());
 
     verify(resolveHostnameJobFactory, times(0)).launch("203.0.113.5");
+  }
+
+  @Test
+  public void tracks_by_the_self_reported_app_name_when_present() throws Exception {
+    when(diningProxyService.proxyGet(eq("/dining/commons/v1/"), isNull(), isNull()))
+        .thenReturn(ResponseEntity.status(HttpStatus.OK).body("[]"));
+    when(hostTrackingService.recordRequest("dining-qa.dokku-00.cs.ucsb.edu")).thenReturn(true);
+
+    mockMvc
+        .perform(
+            get("/dining/commons/v1/")
+                .header("X-Forwarded-For", "203.0.113.5")
+                .header("X-Requesting-App", "dining-qa.dokku-00.cs.ucsb.edu"))
+        .andExpect(status().isOk());
+
+    verify(hostTrackingService, times(1)).recordRequest("dining-qa.dokku-00.cs.ucsb.edu");
+  }
+
+  @Test
+  public void does_not_launch_a_resolution_job_for_a_self_reported_app_name() throws Exception {
+    when(diningProxyService.proxyGet(eq("/dining/commons/v1/"), isNull(), isNull()))
+        .thenReturn(ResponseEntity.status(HttpStatus.OK).body("[]"));
+    when(hostTrackingService.recordRequest("dining-qa.dokku-00.cs.ucsb.edu")).thenReturn(true);
+
+    mockMvc
+        .perform(
+            get("/dining/commons/v1/")
+                .header("X-Forwarded-For", "203.0.113.5")
+                .header("X-Requesting-App", "dining-qa.dokku-00.cs.ucsb.edu"))
+        .andExpect(status().isOk());
+
+    verify(resolveHostnameJobFactory, times(0)).launch(anyString());
+  }
+
+  @Test
+  public void falls_back_to_the_address_when_the_requesting_app_header_is_blank() throws Exception {
+    when(diningProxyService.proxyGet(eq("/dining/commons/v1/"), isNull(), isNull()))
+        .thenReturn(ResponseEntity.status(HttpStatus.OK).body("[]"));
+
+    mockMvc
+        .perform(
+            get("/dining/commons/v1/")
+                .header("X-Forwarded-For", "203.0.113.5")
+                .header("X-Requesting-App", "   "))
+        .andExpect(status().isOk());
+
+    verify(hostTrackingService, times(1)).recordRequest("203.0.113.5");
   }
 }
