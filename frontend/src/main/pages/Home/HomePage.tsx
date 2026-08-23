@@ -1,5 +1,10 @@
-import { useBackend } from "main/utils/useBackend";
+import { useBackend, useBackendMutation } from "main/utils/useBackend";
 import BasicLayout from "main/layouts/BasicLayout/BasicLayout";
+import OurTable from "main/components/Common/OurTable";
+import { Button } from "react-bootstrap";
+import { toast } from "react-toastify";
+import type { Cell } from "@tanstack/react-table";
+import { hasRole, useCurrentUser } from "main/utils/currentUser";
 
 type Stats = {
   totalRequests: number;
@@ -15,6 +20,18 @@ const defaultStats: Stats = {
   hitRatePercentage: 0,
 };
 
+export type HostCount = {
+  host: string;
+  count: number;
+};
+
+const hostsEndpoint = "/api/admin/hosts";
+
+// A host that hasn't (yet, or successfully) resolved to a hostname still displays as its own
+// raw IPv4 address - that's exactly the signal to show a retry button for it.
+const looksLikeIpAddress = (host: string): boolean =>
+  /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
+
 export default function HomePage(): React.JSX.Element {
   const { data } = useBackend<Stats>(
     ["/api/stats"],
@@ -23,6 +40,60 @@ export default function HomePage(): React.JSX.Element {
     defaultStats,
   );
   const stats = data ?? defaultStats;
+
+  const currentUser = useCurrentUser();
+  const isAdmin = hasRole(currentUser, "ROLE_ADMIN");
+
+  const { data: hostCounts } = useBackend<HostCount[]>(
+    // Stryker disable next-line ArrayDeclaration: this is the only query using this key in
+    // any given test, so an empty key behaves identically in isolation.
+    [hostsEndpoint],
+    // Stryker disable next-line StringLiteral: axios treats a falsy method as "GET"
+    { method: "GET", url: hostsEndpoint },
+    // Stryker disable next-line all : don't test default value of empty list
+    [],
+    false,
+    { enabled: isAdmin },
+  );
+
+  const retryMutation = useBackendMutation<string>(
+    (ip: string) => ({
+      url: `${hostsEndpoint}/resolve`,
+      method: "POST",
+      params: { ip },
+    }),
+    {
+      onSuccess: () => {
+        toast("Requested hostname resolution");
+      },
+    },
+    // Stryker disable next-line ArrayDeclaration: invalidateQueries([]) invalidates every
+    // query, which is behaviorally identical here since this is the only active query.
+    [hostsEndpoint],
+  );
+
+  const hostColumns = [
+    { header: "Host", accessorKey: "host" },
+    { header: "Count", accessorKey: "count" },
+    {
+      header: "",
+      id: "retry",
+      cell: ({ cell }: { cell: Cell<HostCount, unknown> }) => {
+        if (!looksLikeIpAddress(cell.row.original.host)) {
+          return null;
+        }
+        return (
+          <Button
+            size="sm"
+            onClick={() => retryMutation.mutate(cell.row.original.host)}
+            data-testid={`HomePage-hosts-table-cell-row-${cell.row.index}-col-retry-button`}
+          >
+            Retry
+          </Button>
+        );
+      },
+    },
+  ];
 
   return (
     <BasicLayout>
@@ -52,6 +123,20 @@ export default function HomePage(): React.JSX.Element {
             </tr>
           </tbody>
         </table>
+
+        {isAdmin && (
+          <>
+            <h2>Requesting Hosts</h2>
+            <OurTable
+              // Stryker disable next-line ArrayDeclaration: initialData=[] above guarantees
+              // hostCounts is never actually undefined at runtime; this is TypeScript-only
+              // defensiveness (the useBackend generic wrapper defeats initialData narrowing).
+              data={hostCounts ?? []}
+              columns={hostColumns}
+              testid="HomePage-hosts-table"
+            />
+          </>
+        )}
       </div>
     </BasicLayout>
   );
