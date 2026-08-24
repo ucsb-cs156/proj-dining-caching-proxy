@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Exposes the four in-memory cache performance counters. */
+/** Exposes the persisted cache performance counters. */
 @Tag(name = "Stats")
 @RequestMapping("/api/stats")
 @RestController
@@ -20,7 +20,7 @@ public class StatsController {
   public record StatsDTO(
       long totalRequests, long cacheHits, long cacheMisses, double hitRatePercentage) {}
 
-  @Operation(summary = "Get cache performance statistics since the proxy started up")
+  @Operation(summary = "Get cumulative cache performance statistics")
   @PreAuthorize("hasRole('ROLE_USER')")
   @GetMapping("")
   public StatsDTO getStats() {
