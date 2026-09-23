@@ -13,7 +13,7 @@ design and Q&A.
 | qa | TBD |
 
 # Versions
-* Java: 21
+* Java: 25
 * node: 22.23.1
 
 See [docs/versions.md](docs/versions.md) for more information on upgrading versions.
