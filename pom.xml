@@ -184,6 +184,18 @@
       </resource>
     </resources>
     <plugins>
+      <!-- Since JDK 23, javac no longer runs annotation processors found on the
+      classpath (such as Lombok) unless asked to explicitly. Without -proc:full the
+      build fails with "cannot find symbol" for every Lombok-generated getter,
+      builder and log field. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <proc>full</proc>
+        </configuration>
+      </plugin>
+
       <!-- This fixes a problem as explained in this SO article:
       https://stackoverflow.com/a/61936537/13960329
       -->

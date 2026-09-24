@@ -17,6 +17,11 @@ Check these versions in `pom.xml` and bump them if needed:
 * `pitest-maven` and `pitest-junit5-plugin` (mutation testing)
 * `git-code-format-maven-plugin` and the `google-java-format` it bundles (formatting)
 
+Also note that since JDK 23, `javac` does not run annotation processors such as Lombok
+unless told to explicitly; `pom.xml` sets `<proc>full</proc>` on `maven-compiler-plugin`
+for that reason. If a build ever fails with `cannot find symbol` for every Lombok-generated
+getter, builder or `log` field, that setting is the first thing to check.
+
 When the Spring Boot version changes, also check libraries tied to the Boot line,
 such as `springdoc-openapi-starter-webmvc-ui`.
 
