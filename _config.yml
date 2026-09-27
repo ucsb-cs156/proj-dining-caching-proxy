@@ -20,4 +20,4 @@ repo_name: "TBD"
 repo: ucsb-cs156/proj-dining-caching-proxy
 owner: ucsb-cs156
 repo_name: proj-dining-caching-proxy
-pull_requests: []
+pull_requests: [{"author":{"id":"MDQ6VXNlcjExMTkwMTc=","is_bot":false,"login":"pconrad","name":"Phill Conrad"},"headRefName":"pc/issue-23-node-24-lts","number":24,"title":"Update frontend to Node 24.21.0 LTS; upgrade dependencies (0 audit vulnerabilities)","url":"https://github.com/ucsb-cs156/proj-dining-caching-proxy/pull/24"}]
