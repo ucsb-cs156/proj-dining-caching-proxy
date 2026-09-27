@@ -24,7 +24,7 @@
     <app.packagePath>edu/ucsb/cs156/diningcachingproxy</app.packagePath>
     <targetClasses>${targetClasses:edu.ucsb.cs156.diningcachingproxy.*}</targetClasses>
     <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
-    <app.frontend.nodeVersion>v22.23.1</app.frontend.nodeVersion>
+    <app.frontend.nodeVersion>v24.21.0</app.frontend.nodeVersion>
   </properties>
 
   <dependencies>
@@ -488,7 +488,7 @@
                           <srcfiles dir="${project.basedir}/frontend/node_modules" includes="**/*" />
                           <srcfiles dir="${project.basedir}/frontend/src" includes="**/*" />
                           <srcfiles dir="${project.basedir}/frontend/build" includes="**/*" />
-                          <srcfiles file="${project.basedir}/frontend/vite.config.js" />
+                          <srcfiles file="${project.basedir}/frontend/vite.config.ts" />
                           <mapper type="merge"
                             to="${project.build.outputDirectory}/public/index.html" />
                         </uptodate>
