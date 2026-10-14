@@ -20,4 +20,4 @@ repo_name: "TBD"
 repo: ucsb-cs156/proj-dining-caching-proxy
 owner: ucsb-cs156
 repo_name: proj-dining-caching-proxy
-pull_requests: []
+pull_requests: [{"author":{"id":"MDQ6VXNlcjExMTkwMTc=","is_bot":false,"login":"pconrad","name":"Phill Conrad"},"headRefName":"pc-playwright-runs-on","number":27,"title":"Use PLAYWRIGHT_RUNS_ON variable for Playwright integration workflow runner","url":"https://github.com/ucsb-cs156/proj-dining-caching-proxy/pull/27"}]
